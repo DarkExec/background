@@ -44,6 +44,11 @@ def atomic_write(path: Path, payload: dict) -> None:
     os.chmod(path, 0o600)
 
 
+def ensure_state_root() -> None:
+    STATE_ROOT.mkdir(parents=True, exist_ok=True, mode=0o700)
+    os.chmod(STATE_ROOT, 0o700)
+
+
 def load_job(path: Path) -> dict:
     try:
         job = json.loads(path.read_text())
@@ -158,6 +163,7 @@ def run_job(args) -> int:
     job = load_job(Path(args.job).resolve())
     event = event_id(job, args.event_id)
     fingerprint, darkexec_job = identity(job, event)
+    ensure_state_root()
     path = receipt_path(job["id"], event)
     lock_path = job_lock_path(job["id"])
     lock_path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)

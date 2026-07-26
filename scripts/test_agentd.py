@@ -87,6 +87,8 @@ def main() -> None:
         assert completed["targetThreadId"] == "target-visible"
         assert completed["harnessStatus"] == "completed"
         assert "READ_ONLY" not in receipt_path(state, "test-job", "event-1").read_text()
+        assert state.stat().st_mode & 0o777 == 0o700
+        assert receipt_path(state, "test-job", "event-1").stat().st_mode & 0o777 == 0o600
 
         repeat = invoke([
             str(AGENTD), "run", "--job", str(definition),
