@@ -1,0 +1,11 @@
+[Unit]
+Description=DarkExec background agent %i
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/agentd run --job /etc/darkexec-agentd/%i.json --json
+TimeoutStartSec=20min
+KillMode=control-group
+UMask=0077

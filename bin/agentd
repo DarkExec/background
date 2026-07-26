@@ -1,0 +1,309 @@
+#!/usr/bin/env python3
+"""Run one durable, auditable background task through DarkExec."""
+
+from __future__ import annotations
+
+import argparse
+import fcntl
+import hashlib
+import json
+import os
+import re
+import signal
+import subprocess
+import sys
+import tempfile
+import time
+from datetime import datetime, timezone
+from pathlib import Path
+
+STATE_ROOT = Path(os.environ.get("AGENTD_STATE_ROOT", "/var/lib/darkexec-agentd"))
+DARKEXEC_BIN = os.environ.get("AGENTD_DARKEXEC_BIN", "darkexec")
+ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
+
+
+class AgentInterrupted(Exception):
+    def __init__(self, signum: int):
+        super().__init__(f"interrupted by signal {signum}")
+        self.signum = signum
+
+
+def now() -> str:
+    return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+
+def atomic_write(path: Path, payload: dict) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+    rendered = json.dumps(payload, indent=2, sort_keys=True) + "\n"
+    with tempfile.NamedTemporaryFile("w", dir=path.parent, prefix=f".{path.name}.", delete=False) as handle:
+        handle.write(rendered)
+        handle.flush()
+        os.fsync(handle.fileno())
+        temporary = Path(handle.name)
+    os.replace(temporary, path)
+    os.chmod(path, 0o600)
+
+
+def load_job(path: Path) -> dict:
+    try:
+        job = json.loads(path.read_text())
+    except (OSError, json.JSONDecodeError) as exc:
+        raise ValueError(f"cannot read job definition {path}: {exc}") from exc
+    allowed = {
+        "schemaVersion", "id", "target", "promptFile", "cadenceSeconds",
+        "readOnlyHarness", "timeoutSeconds",
+    }
+    unknown = sorted(set(job) - allowed)
+    if unknown:
+        raise ValueError(f"unknown job fields: {', '.join(unknown)}")
+    if job.get("schemaVersion") != 1:
+        raise ValueError("schemaVersion must be 1")
+    job_id = job.get("id")
+    if not isinstance(job_id, str) or not ID_PATTERN.fullmatch(job_id):
+        raise ValueError("id must contain 1-64 letters, numbers, dots, underscores, or hyphens")
+    target = Path(str(job.get("target", "")))
+    prompt_file = Path(str(job.get("promptFile", "")))
+    if not target.is_absolute() or not target.is_dir():
+        raise ValueError("target must be an existing absolute directory")
+    if not prompt_file.is_absolute() or not prompt_file.is_file():
+        raise ValueError("promptFile must be an existing absolute file")
+    cadence = job.get("cadenceSeconds")
+    if not isinstance(cadence, int) or not 60 <= cadence <= 31_536_000:
+        raise ValueError("cadenceSeconds must be an integer from 60 to 31536000")
+    timeout = job.get("timeoutSeconds", 900)
+    if not isinstance(timeout, int) or not 1 <= timeout <= 86_400:
+        raise ValueError("timeoutSeconds must be an integer from 1 to 86400")
+    if not isinstance(job.get("readOnlyHarness", False), bool):
+        raise ValueError("readOnlyHarness must be boolean")
+    prompt = prompt_file.read_text()
+    if not prompt.strip():
+        raise ValueError("promptFile must not be empty")
+    return {
+        **job,
+        "target": str(target.resolve()),
+        "promptFile": str(prompt_file.resolve()),
+        "prompt": prompt,
+        "timeoutSeconds": timeout,
+        "readOnlyHarness": job.get("readOnlyHarness", False),
+    }
+
+
+def event_id(job: dict, supplied: str | None) -> str:
+    if supplied:
+        if not ID_PATTERN.fullmatch(supplied):
+            raise ValueError("event-id must contain 1-64 letters, numbers, dots, underscores, or hyphens")
+        return supplied
+    return f"slot-{int(time.time()) // job['cadenceSeconds']}"
+
+
+def identity(job: dict, event: str) -> tuple[str, str]:
+    prompt_sha = hashlib.sha256(job["prompt"].encode()).hexdigest()
+    fingerprint = hashlib.sha256(json.dumps({
+        "target": job["target"],
+        "promptSha256": prompt_sha,
+        "readOnlyHarness": job["readOnlyHarness"],
+    }, sort_keys=True).encode()).hexdigest()
+    darkexec_job = f"agentd-{job['id']}-{hashlib.sha256(event.encode()).hexdigest()[:16]}"
+    return fingerprint, darkexec_job
+
+
+def receipt_path(job_id: str, event: str) -> Path:
+    digest = hashlib.sha256(f"{job_id}\0{event}".encode()).hexdigest()
+    return STATE_ROOT / "receipts" / f"{digest}.json"
+
+
+def job_lock_path(job_id: str) -> Path:
+    return STATE_ROOT / "locks" / f"{hashlib.sha256(job_id.encode()).hexdigest()}.lock"
+
+
+def emit(payload: dict, as_json: bool) -> None:
+    if as_json:
+        print(json.dumps(payload, sort_keys=True))
+    else:
+        print(
+            f"{payload.get('jobId')} event={payload.get('eventId')} status={payload.get('status')} "
+            f"targetTask={payload.get('targetThreadId') or '-'}"
+        )
+
+
+def terminalize(path: Path, receipt: dict, status: str, error: str | None = None) -> None:
+    receipt["status"] = status
+    receipt["updatedAt"] = now()
+    receipt["terminal"] = True
+    if error:
+        receipt["error"] = error[:2000]
+    atomic_write(path, receipt)
+
+
+def terminate_group(process: subprocess.Popen, force: bool = False) -> None:
+    if process.poll() is not None:
+        return
+    try:
+        os.killpg(process.pid, signal.SIGKILL if force else signal.SIGTERM)
+    except ProcessLookupError:
+        pass
+
+
+def parse_darkexec(stdout: str) -> dict:
+    lines = [line for line in stdout.splitlines() if line.strip()]
+    if not lines:
+        raise ValueError("DarkExec returned no JSON receipt")
+    value = json.loads(lines[-1])
+    if not isinstance(value, dict):
+        raise ValueError("DarkExec receipt is not an object")
+    return value
+
+
+def run_job(args) -> int:
+    job = load_job(Path(args.job).resolve())
+    event = event_id(job, args.event_id)
+    fingerprint, darkexec_job = identity(job, event)
+    path = receipt_path(job["id"], event)
+    lock_path = job_lock_path(job["id"])
+    lock_path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+    lock = lock_path.open("a+")
+    try:
+        fcntl.flock(lock.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        emit({"jobId": job["id"], "eventId": event, "status": "busy", "terminal": False}, args.json)
+        return 75
+
+    if path.exists():
+        prior = json.loads(path.read_text())
+        if prior.get("requestFingerprint") != fingerprint:
+            raise SystemExit("event identity already belongs to a different target, prompt, or harness mode")
+        emit(prior, args.json)
+        return 0 if prior.get("status") == "completed" else 1
+
+    receipt = {
+        "schemaVersion": 1,
+        "jobId": job["id"],
+        "eventId": event,
+        "requestFingerprint": fingerprint,
+        "promptSha256": hashlib.sha256(job["prompt"].encode()).hexdigest(),
+        "targetPath": job["target"],
+        "darkexecJobId": darkexec_job,
+        "darkexecStatusCommand": f"darkexec status --job-id {darkexec_job} --json",
+        "createdAt": now(),
+        "updatedAt": now(),
+        "status": "dispatching",
+        "terminal": False,
+    }
+    atomic_write(path, receipt)
+    command = [
+        DARKEXEC_BIN, "dispatch", "--target", job["target"],
+        "--job-id", darkexec_job, "--prompt-stdin", "--json",
+    ]
+    if job["readOnlyHarness"]:
+        command.insert(-1, "--read-only-harness")
+    process = subprocess.Popen(
+        command,
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        start_new_session=True,
+    )
+    previous_handlers = {}
+
+    def handle_signal(signum, _frame):
+        terminate_group(process)
+        raise AgentInterrupted(signum)
+
+    for signum in (signal.SIGTERM, signal.SIGINT):
+        previous_handlers[signum] = signal.signal(signum, handle_signal)
+    try:
+        try:
+            stdout, stderr = process.communicate(job["prompt"], timeout=job["timeoutSeconds"])
+        except subprocess.TimeoutExpired:
+            terminate_group(process)
+            try:
+                stdout, stderr = process.communicate(timeout=2)
+            except subprocess.TimeoutExpired:
+                terminate_group(process, force=True)
+                stdout, stderr = process.communicate()
+            terminalize(path, receipt, "failed", f"DarkExec exceeded {job['timeoutSeconds']} seconds")
+            receipt["timedOut"] = True
+            atomic_write(path, receipt)
+            emit(receipt, args.json)
+            return 1
+    except AgentInterrupted as exc:
+        try:
+            process.wait(timeout=2)
+        except subprocess.TimeoutExpired:
+            terminate_group(process, force=True)
+            process.wait(timeout=2)
+        terminalize(path, receipt, "interrupted", str(exc))
+        emit(receipt, args.json)
+        return 128 + exc.signum
+    finally:
+        for signum, handler in previous_handlers.items():
+            signal.signal(signum, handler)
+
+    try:
+        darkexec = parse_darkexec(stdout)
+    except (ValueError, json.JSONDecodeError) as exc:
+        terminalize(path, receipt, "failed", f"{exc}; stderr={stderr[-1000:]}")
+        emit(receipt, args.json)
+        return 1
+    receipt.update({
+        "darkexecStatus": darkexec.get("status"),
+        "executiveThreadId": (darkexec.get("executive") or {}).get("threadId"),
+        "targetThreadId": (darkexec.get("target") or {}).get("threadId"),
+        "harnessStatus": ((darkexec.get("target") or {}).get("harness") or {}).get("status"),
+    })
+    if process.returncode == 0 and darkexec.get("status") == "completed":
+        terminalize(path, receipt, "completed")
+        emit(receipt, args.json)
+        return 0
+    error = darkexec.get("error") or stderr[-1000:] or f"DarkExec exited {process.returncode}"
+    terminalize(path, receipt, "failed", str(error))
+    emit(receipt, args.json)
+    return 1
+
+
+def status(args) -> int:
+    job = load_job(Path(args.job).resolve())
+    event = event_id(job, args.event_id)
+    path = receipt_path(job["id"], event)
+    if not path.exists():
+        raise SystemExit(f"unknown agentd event: {job['id']} {event}")
+    receipt = json.loads(path.read_text())
+    emit(receipt, args.json)
+    return 0
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(prog="agentd")
+    sub = parser.add_subparsers(dest="command", required=True)
+    run = sub.add_parser("run")
+    run.add_argument("--job", required=True)
+    run.add_argument("--event-id")
+    run.add_argument("--json", action="store_true")
+    inspect = sub.add_parser("status")
+    inspect.add_argument("--job", required=True)
+    inspect.add_argument("--event-id")
+    inspect.add_argument("--json", action="store_true")
+    validate = sub.add_parser("validate-job")
+    validate.add_argument("--job", required=True)
+    args = parser.parse_args()
+    try:
+        if args.command == "run":
+            return run_job(args)
+        if args.command == "status":
+            return status(args)
+        job = load_job(Path(args.job).resolve())
+        print(json.dumps({
+            "status": "valid",
+            "id": job["id"],
+            "target": job["target"],
+            "promptSha256": hashlib.sha256(job["prompt"].encode()).hexdigest(),
+        }, sort_keys=True))
+        return 0
+    except ValueError as exc:
+        parser.error(str(exc))
+    return 2
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

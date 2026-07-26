@@ -1,0 +1,1 @@
+Inspect the target's documented status and report only what is currently proved. Make no changes.

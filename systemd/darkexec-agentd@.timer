@@ -1,0 +1,11 @@
+[Unit]
+Description=Run DarkExec background agent %i
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=15min
+Persistent=true
+Unit=darkexec-agentd@%i.service
+
+[Install]
+WantedBy=timers.target

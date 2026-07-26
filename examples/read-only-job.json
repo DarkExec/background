@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "id": "read-only-example",
+  "target": "/absolute/saved/codex/project",
+  "promptFile": "/etc/darkexec-agentd/prompts/read-only-example.txt",
+  "cadenceSeconds": 86400,
+  "readOnlyHarness": true,
+  "timeoutSeconds": 900
+}
