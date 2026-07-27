@@ -13,7 +13,7 @@ import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-BACKGROUND = ROOT / "bin/darkexec-back"
+BACKGROUND = ROOT / "bin/darkexec-background"
 
 FAKE_DARKEXEC = """#!/usr/bin/env python3
 import json, os, pathlib, sys, time
