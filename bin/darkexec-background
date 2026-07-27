@@ -17,14 +17,8 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 
-STATE_ROOT = Path(os.environ.get(
-    "DARKEXEC_BACKGROUND_STATE_ROOT",
-    os.environ.get("AGENTD_STATE_ROOT", "/var/lib/darkexec-background"),
-))
-DARKEXEC_BIN = os.environ.get(
-    "DARKEXEC_BACKGROUND_DARKEXEC_BIN",
-    os.environ.get("AGENTD_DARKEXEC_BIN", "darkexec"),
-)
+STATE_ROOT = Path(os.environ.get("DARKEXEC_BACKGROUND_STATE_ROOT", "/var/lib/darkexec-background"))
+DARKEXEC_BIN = os.environ.get("DARKEXEC_BACKGROUND_DARKEXEC_BIN", "darkexec")
 ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
 
 
@@ -286,7 +280,7 @@ def status(args) -> int:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(prog="darkexec-back")
+    parser = argparse.ArgumentParser(prog="darkexec-background")
     sub = parser.add_subparsers(dest="command", required=True)
     run = sub.add_parser("run")
     run.add_argument("--job", required=True)

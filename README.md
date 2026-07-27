@@ -42,16 +42,16 @@ arguments. Receipts store only the prompt digest.
 ```bash
 ./scripts/validate.sh
 sudo ./scripts/install.sh
-darkexec-back validate-job --job /etc/darkexec-background/daily-read-only.json
-sudo darkexec-back run --job /etc/darkexec-background/daily-read-only.json --json
-sudo darkexec-back status --job /etc/darkexec-background/daily-read-only.json --json
+darkexec-background validate-job --job /etc/darkexec-background/daily-read-only.json
+sudo darkexec-background run --job /etc/darkexec-background/daily-read-only.json --json
+sudo darkexec-background status --job /etc/darkexec-background/daily-read-only.json --json
 ```
 
 Without `--event-id`, Background derives a UTC epoch-aligned slot from `cadenceSeconds`. Repeated
 calls in the same slot read the same receipt. External schedulers may supply a stable `--event-id`.
 
-The alpha installer also provides `agentd` as a deprecated compatibility alias. New integrations
-should use `darkexec-back`; the planned DarkExec CLI entrypoint is `darkexec back`.
+The standalone alpha executable is `darkexec-background`; the planned DarkExec umbrella CLI
+entrypoint is `darkexec back`.
 
 The installer places but does not enable the systemd template. Enabling a timer is a separate
 operator decision.
