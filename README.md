@@ -1,6 +1,6 @@
-# Agentd
+# DarkExec Background
 
-Agentd is a durable background-agent runner for
+DarkExec Background is a durable background-agent runner for
 [DarkExec](https://github.com/DarkExec/darkexec) and Codex App.
 
 It converts a scheduled or externally identified event into at most one DarkExec dispatch, then
@@ -8,7 +8,7 @@ stores a compact terminal receipt containing the visible native task identities.
 
 ## Ownership
 
-Agentd owns:
+Background owns:
 
 - cadence-slot or caller-supplied event identity;
 - per-job concurrency exclusion;
@@ -27,7 +27,7 @@ secrets, model selection, or automatic task resumption.
   "schemaVersion": 1,
   "id": "daily-read-only",
   "target": "/absolute/saved/codex/project",
-  "promptFile": "/etc/darkexec-agentd/prompts/daily-read-only.txt",
+  "promptFile": "/etc/darkexec-background/prompts/daily-read-only.txt",
   "cadenceSeconds": 86400,
   "readOnlyHarness": true,
   "timeoutSeconds": 900
@@ -42,13 +42,16 @@ arguments. Receipts store only the prompt digest.
 ```bash
 ./scripts/validate.sh
 sudo ./scripts/install.sh
-agentd validate-job --job /etc/darkexec-agentd/daily-read-only.json
-sudo agentd run --job /etc/darkexec-agentd/daily-read-only.json --json
-sudo agentd status --job /etc/darkexec-agentd/daily-read-only.json --json
+darkexec-back validate-job --job /etc/darkexec-background/daily-read-only.json
+sudo darkexec-back run --job /etc/darkexec-background/daily-read-only.json --json
+sudo darkexec-back status --job /etc/darkexec-background/daily-read-only.json --json
 ```
 
-Without `--event-id`, Agentd derives a UTC epoch-aligned slot from `cadenceSeconds`. Repeated calls
-in the same slot read the same receipt. External schedulers may supply a stable `--event-id`.
+Without `--event-id`, Background derives a UTC epoch-aligned slot from `cadenceSeconds`. Repeated
+calls in the same slot read the same receipt. External schedulers may supply a stable `--event-id`.
+
+The alpha installer also provides `agentd` as a deprecated compatibility alias. New integrations
+should use `darkexec-back`; the planned DarkExec CLI entrypoint is `darkexec back`.
 
 The installer places but does not enable the systemd template. Enabling a timer is a separate
 operator decision.

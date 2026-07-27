@@ -1,11 +1,11 @@
 # Quality
 
-A qualified Agentd event has:
+A qualified Background event has:
 
 - one valid job definition and one stable event identity;
 - no overlapping event for the same job;
 - at most one DarkExec dispatch;
-- prompt transport over stdin and only a prompt digest in Agentd state;
+- prompt transport over stdin and only a prompt digest in Background state;
 - terminal timeout, signal, transport failure, DarkExec failure, or completion;
 - executive and target task identities on successful completion;
 - atomic private receipt and deterministic status readback; and

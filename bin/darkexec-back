@@ -17,12 +17,18 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 
-STATE_ROOT = Path(os.environ.get("AGENTD_STATE_ROOT", "/var/lib/darkexec-agentd"))
-DARKEXEC_BIN = os.environ.get("AGENTD_DARKEXEC_BIN", "darkexec")
+STATE_ROOT = Path(os.environ.get(
+    "DARKEXEC_BACKGROUND_STATE_ROOT",
+    os.environ.get("AGENTD_STATE_ROOT", "/var/lib/darkexec-background"),
+))
+DARKEXEC_BIN = os.environ.get(
+    "DARKEXEC_BACKGROUND_DARKEXEC_BIN",
+    os.environ.get("AGENTD_DARKEXEC_BIN", "darkexec"),
+)
 ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
 
 
-class AgentInterrupted(Exception):
+class BackgroundInterrupted(Exception):
     def __init__(self, signum: int):
         super().__init__(f"interrupted by signal {signum}")
         self.signum = signum
@@ -108,7 +114,7 @@ def identity(job: dict, event: str) -> tuple[str, str]:
         "promptSha256": prompt_sha,
         "readOnlyHarness": job["readOnlyHarness"],
     }, sort_keys=True).encode()).hexdigest()
-    darkexec_job = f"agentd-{job['id']}-{hashlib.sha256(event.encode()).hexdigest()[:16]}"
+    darkexec_job = f"background-{job['id']}-{hashlib.sha256(event.encode()).hexdigest()[:16]}"
     return fingerprint, darkexec_job
 
 
@@ -214,7 +220,7 @@ def run_job(args) -> int:
 
     def handle_signal(signum, _frame):
         terminate_group(process)
-        raise AgentInterrupted(signum)
+        raise BackgroundInterrupted(signum)
 
     for signum in (signal.SIGTERM, signal.SIGINT):
         previous_handlers[signum] = signal.signal(signum, handle_signal)
@@ -233,7 +239,7 @@ def run_job(args) -> int:
             atomic_write(path, receipt)
             emit(receipt, args.json)
             return 1
-    except AgentInterrupted as exc:
+    except BackgroundInterrupted as exc:
         try:
             process.wait(timeout=2)
         except subprocess.TimeoutExpired:
@@ -273,14 +279,14 @@ def status(args) -> int:
     event = event_id(job, args.event_id)
     path = receipt_path(job["id"], event)
     if not path.exists():
-        raise SystemExit(f"unknown agentd event: {job['id']} {event}")
+        raise SystemExit(f"unknown Background event: {job['id']} {event}")
     receipt = json.loads(path.read_text())
     emit(receipt, args.json)
     return 0
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(prog="agentd")
+    parser = argparse.ArgumentParser(prog="darkexec-back")
     sub = parser.add_subparsers(dest="command", required=True)
     run = sub.add_parser("run")
     run.add_argument("--job", required=True)
