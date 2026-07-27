@@ -4,5 +4,5 @@ Use GitHub private vulnerability reporting for issues that could place users or 
 risk. Never include credentials, prompt contents, private task transcripts, customer data, or live
 host state in public reports.
 
-Agentd invokes DarkExec with the operator's configured authority. It is not a sandbox or
+Background invokes DarkExec with the operator's configured authority. It is not a sandbox or
 authorization system.

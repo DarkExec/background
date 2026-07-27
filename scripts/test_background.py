@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Deterministic Agentd contract tests with a fake DarkExec executable."""
+"""Deterministic Background contract tests with a fake DarkExec executable."""
 
 from __future__ import annotations
 
@@ -13,11 +13,11 @@ import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-AGENTD = ROOT / "bin/agentd"
+BACKGROUND = ROOT / "bin/darkexec-back"
 
 FAKE_DARKEXEC = """#!/usr/bin/env python3
 import json, os, pathlib, sys, time
-count = pathlib.Path(os.environ["AGENTD_FAKE_COUNT"])
+count = pathlib.Path(os.environ["DARKEXEC_BACKGROUND_FAKE_COUNT"])
 count.write_text(str(int(count.read_text() or "0") + 1))
 prompt = sys.stdin.read()
 if prompt == "SLOW":
@@ -68,15 +68,15 @@ def main() -> None:
         state = root / "state"
         env = {
             **os.environ,
-            "AGENTD_STATE_ROOT": str(state),
-            "AGENTD_DARKEXEC_BIN": str(fake),
-            "AGENTD_FAKE_COUNT": str(count),
+            "DARKEXEC_BACKGROUND_STATE_ROOT": str(state),
+            "DARKEXEC_BACKGROUND_DARKEXEC_BIN": str(fake),
+            "DARKEXEC_BACKGROUND_FAKE_COUNT": str(count),
         }
 
-        validate = invoke([str(AGENTD), "validate-job", "--job", str(definition)], env)
+        validate = invoke([str(BACKGROUND), "validate-job", "--job", str(definition)], env)
         assert validate.returncode == 0, validate.stderr
         first = invoke([
-            str(AGENTD), "run", "--job", str(definition),
+            str(BACKGROUND), "run", "--job", str(definition),
             "--event-id", "event-1", "--json",
         ], env)
         assert first.returncode == 0, first.stderr or first.stdout
@@ -91,7 +91,7 @@ def main() -> None:
         assert receipt_path(state, "test-job", "event-1").stat().st_mode & 0o777 == 0o600
 
         repeat = invoke([
-            str(AGENTD), "run", "--job", str(definition),
+            str(BACKGROUND), "run", "--job", str(definition),
             "--event-id", "event-1", "--json",
         ], env)
         assert repeat.returncode == 0
@@ -99,7 +99,7 @@ def main() -> None:
         assert count.read_text() == "1", count.read_text()
 
         status = invoke([
-            str(AGENTD), "status", "--job", str(definition),
+            str(BACKGROUND), "status", "--job", str(definition),
             "--event-id", "event-1", "--json",
         ], env)
         assert status.returncode == 0
@@ -107,7 +107,7 @@ def main() -> None:
 
         prompt.write_text("CHANGED")
         conflict = invoke([
-            str(AGENTD), "run", "--job", str(definition),
+            str(BACKGROUND), "run", "--job", str(definition),
             "--event-id", "event-1", "--json",
         ], env)
         assert conflict.returncode != 0
@@ -117,7 +117,7 @@ def main() -> None:
         job["timeoutSeconds"] = 1
         definition.write_text(json.dumps(job))
         timed = invoke([
-            str(AGENTD), "run", "--job", str(definition),
+            str(BACKGROUND), "run", "--job", str(definition),
             "--event-id", "event-timeout", "--json",
         ], env)
         assert timed.returncode == 1, timed
@@ -129,7 +129,7 @@ def main() -> None:
         definition.write_text(json.dumps(job))
         running = subprocess.Popen(
             [
-                str(AGENTD), "run", "--job", str(definition),
+                str(BACKGROUND), "run", "--job", str(definition),
                 "--event-id", "event-running", "--json",
             ],
             stdout=subprocess.PIPE,
@@ -144,7 +144,7 @@ def main() -> None:
             time.sleep(0.02)
         assert running_receipt.exists()
         busy = invoke([
-            str(AGENTD), "run", "--job", str(definition),
+            str(BACKGROUND), "run", "--job", str(definition),
             "--event-id", "event-overlap", "--json",
         ], env)
         assert busy.returncode == 75, busy
