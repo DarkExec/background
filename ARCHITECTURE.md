@@ -25,6 +25,9 @@ target-owned live events such as watchdog incidents and Discord messages. The pr
 idempotency and passed directly to DarkExec; it is never written into the compact Background
 receipt. Existing v1 definitions and invocations remain valid.
 
+Background does not impose an execution deadline by default. A job may opt into a positive
+`timeoutSeconds`; zero keeps the DarkExec dispatch alive until completion or an explicit signal.
+
 Schedulers own when to invoke Background. Targets own their code, tools, tests, proof, and operational
 memory. Notification systems own external delivery.
 
