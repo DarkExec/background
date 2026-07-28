@@ -22,3 +22,14 @@ prompt digest, or harness mode changes.
 
 Schedulers own when to invoke Background. Targets own their code, tools, tests, proof, and operational
 memory. Notification systems own external delivery.
+
+## Watch projection
+
+Background owns the versioned, sanitized projection that optional operator views consume. The
+projection is a bounded operational envelope, not a transcript or a replacement for the private
+receipt. It keeps admission, execution, verification, notification, and attention as independent
+facts so a consumer cannot turn “the agent finished” into “the real job succeeded.”
+
+The initial contract is `schemas/darkexec-background-projection.v1.schema.json`. It is deliberately
+transport-neutral: a local fixture, file exporter, or future asynchronous HTTPS publisher can emit
+the same document. Background execution never waits for a projection consumer.

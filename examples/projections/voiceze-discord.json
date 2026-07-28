@@ -1,0 +1,69 @@
+{
+  "schema": "darkexec.background.projection/v1",
+  "installation": {
+    "id": "install_droidfi_fixture",
+    "label": "DROIDFI fixture"
+  },
+  "agent": {
+    "id": "voiceze-discord",
+    "label": "VoiceZe Discord moderation",
+    "definitionRevision": "definition_fixture_voiceze_v1",
+    "runtimeVersion": "background_fixture_v1",
+    "targetLabel": "VoiceZe community operations",
+    "trigger": {
+      "kind": "event",
+      "summary": "A Discord message enters a deterministic moderation gate"
+    }
+  },
+  "run": {
+    "id": "run_voiceze_fixture_message",
+    "eventId": "discord_message_fixture",
+    "observedAt": "2026-07-27T14:00:00Z"
+  },
+  "admission": {
+    "status": "suppressed",
+    "reasonCode": "no_agent_needed",
+    "summary": "The deterministic gate found no reason to wake an agent."
+  },
+  "execution": {
+    "status": "not_dispatched",
+    "startedAt": null,
+    "completedAt": null,
+    "darkexecJobId": null,
+    "executiveTaskRef": null,
+    "targetTaskRef": null,
+    "harnessStatus": "not_applicable"
+  },
+  "verification": {
+    "status": "not_applicable",
+    "summary": "No domain action required verification."
+  },
+  "notification": {
+    "status": "not_required",
+    "summary": "No operator notification was required."
+  },
+  "attention": {
+    "status": "none",
+    "reasonCode": null,
+    "summary": null
+  },
+  "usage": {
+    "modelCalls": 0,
+    "toolOperations": 0,
+    "tokens": 0
+  },
+  "timeline": [
+    {
+      "kind": "triggered",
+      "occurredAt": "2026-07-27T14:00:00Z",
+      "status": "observed",
+      "summary": "Discord message event observed."
+    },
+    {
+      "kind": "admission_completed",
+      "occurredAt": "2026-07-27T14:00:01Z",
+      "status": "suppressed",
+      "summary": "Deterministic admission decided that no agent was needed."
+    }
+  ]
+}

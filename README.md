@@ -20,6 +20,21 @@ Background owns:
 It does not own monitoring, business policy, incident classification, notification delivery, target
 secrets, model selection, or automatic task resumption.
 
+## Optional Watch projection
+
+`schemas/darkexec-background-projection.v1.schema.json` defines the bounded operational facts that a
+read-only consumer such as DarkExec Watch may receive. The schema excludes raw prompts, transcripts,
+tool arguments, credentials, target payloads, and arbitrary command output.
+
+The two sanitized examples deliberately exercise different shapes:
+
+- `examples/projections/gos-watchdog.json`: an incident-triggered agent completed while domain
+  verification remained partial.
+- `examples/projections/voiceze-discord.json`: a Discord event was deterministically suppressed, so
+  no agent task was expected.
+
+These examples are compatibility fixtures, not production records.
+
 ## Job definition
 
 ```json
