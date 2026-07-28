@@ -33,8 +33,8 @@ print(json.dumps({
 """
 
 
-def invoke(command: list[str], env: dict) -> subprocess.CompletedProcess:
-    return subprocess.run(command, capture_output=True, text=True, env=env, check=False)
+def invoke(command: list[str], env: dict, prompt: str | None = None) -> subprocess.CompletedProcess:
+    return subprocess.run(command, input=prompt, capture_output=True, text=True, env=env, check=False)
 
 
 def receipt_path(state: Path, job_id: str, event: str) -> Path:
@@ -156,10 +156,53 @@ def main() -> None:
         assert interrupted["status"] == "interrupted" and interrupted["terminal"] is True
         assert count.read_text() == "3", count.read_text()
 
+        dynamic_definition = root / "dynamic-job.json"
+        dynamic_job = {
+            "schemaVersion": 2,
+            "id": "dynamic-job",
+            "target": str(target),
+            "promptMode": "stdin",
+            "cadenceSeconds": 60,
+            "readOnlyHarness": False,
+            "timeoutSeconds": 2,
+        }
+        dynamic_definition.write_text(json.dumps(dynamic_job))
+        dynamic_validate = invoke(
+            [str(BACKGROUND), "validate-job", "--job", str(dynamic_definition)],
+            env,
+        )
+        assert dynamic_validate.returncode == 0, dynamic_validate.stderr
+        dynamic_first = invoke([
+            str(BACKGROUND), "run", "--job", str(dynamic_definition),
+            "--event-id", "incident-1", "--prompt-stdin", "--json",
+        ], env, "DYNAMIC INCIDENT")
+        assert dynamic_first.returncode == 0, dynamic_first.stderr
+        dynamic_receipt = json.loads(dynamic_first.stdout)
+        assert dynamic_receipt["definitionSha256"]
+        assert dynamic_receipt["runtimeVersion"] == "2"
+        assert "DYNAMIC INCIDENT" not in receipt_path(state, "dynamic-job", "incident-1").read_text()
+        dynamic_repeat = invoke([
+            str(BACKGROUND), "run", "--job", str(dynamic_definition),
+            "--event-id", "incident-1", "--prompt-stdin", "--json",
+        ], env, "DYNAMIC INCIDENT")
+        assert dynamic_repeat.returncode == 0
+        assert count.read_text() == "4", count.read_text()
+        dynamic_conflict = invoke([
+            str(BACKGROUND), "run", "--job", str(dynamic_definition),
+            "--event-id", "incident-1", "--prompt-stdin", "--json",
+        ], env, "CHANGED INCIDENT")
+        assert dynamic_conflict.returncode != 0
+        missing_stdin = invoke([
+            str(BACKGROUND), "run", "--job", str(dynamic_definition),
+            "--event-id", "incident-2", "--json",
+        ], env)
+        assert missing_stdin.returncode != 0
+
     print(json.dumps({"status": "passed", "contracts": [
         "valid-job", "one-dispatch", "idempotent-event", "conflict-closed",
         "private-receipt", "status-readback", "timeout-terminalized",
-        "concurrency-excluded", "signal-terminalized",
+        "concurrency-excluded", "signal-terminalized", "dynamic-stdin",
+        "definition-digest", "v2-idempotency", "v2-conflict-closed",
     ]}))
 
 
