@@ -15,6 +15,7 @@
     "notification",
     "attention",
     "usage",
+    "outputs",
     "timeline"
   ],
   "properties": {
@@ -47,6 +48,9 @@
     },
     "usage": {
       "$ref": "#/$defs/usage"
+    },
+    "outputs": {
+      "$ref": "#/$defs/outputs"
     },
     "timeline": {
       "type": "array",
@@ -176,6 +180,11 @@
         "executiveTaskRef",
         "targetTaskRef",
         "harnessStatus"
+        ,
+        "executiveProjectRoot",
+        "targetProjectRoot",
+        "backgroundReceiptRef",
+        "darkexecReceiptRef"
       ],
       "properties": {
         "status": {
@@ -227,6 +236,18 @@
         },
         "harnessStatus": {
           "enum": ["unknown", "not_started", "running", "completed", "failed", "not_applicable"]
+        },
+        "executiveProjectRoot": {
+          "$ref": "#/$defs/nullablePath"
+        },
+        "targetProjectRoot": {
+          "$ref": "#/$defs/nullablePath"
+        },
+        "backgroundReceiptRef": {
+          "$ref": "#/$defs/nullableReference"
+        },
+        "darkexecReceiptRef": {
+          "$ref": "#/$defs/nullableReference"
         }
       }
     },
@@ -290,6 +311,74 @@
         "tokens": {
           "type": ["integer", "null"],
           "minimum": 0
+        }
+      }
+    },
+    "nullablePath": {
+      "type": ["string", "null"],
+      "maxLength": 256,
+      "pattern": "^/[^\\u0000\\r\\n]*$"
+    },
+    "nullableReference": {
+      "type": ["string", "null"],
+      "maxLength": 256,
+      "pattern": "^[A-Za-z0-9._:/-]+$"
+    },
+    "outputFact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "summary", "owner", "sourceField", "observedAt", "composedFrom"],
+      "properties": {
+        "status": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 60,
+          "pattern": "^[a-z0-9._-]+$"
+        },
+        "summary": {
+          "$ref": "#/$defs/summary"
+        },
+        "owner": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80,
+          "pattern": "^[A-Za-z0-9._-]+$"
+        },
+        "sourceField": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120,
+          "pattern": "^[A-Za-z0-9._-]+$"
+        },
+        "observedAt": {
+          "$ref": "#/$defs/timestamp"
+        },
+        "composedFrom": {
+          "type": "array",
+          "maxItems": 8,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120,
+            "pattern": "^[A-Za-z0-9._-]+$"
+          }
+        }
+      }
+    },
+    "outputs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["product", "harness", "notification"],
+      "properties": {
+        "product": {
+          "$ref": "#/$defs/outputFact"
+        },
+        "harness": {
+          "$ref": "#/$defs/outputFact"
+        },
+        "notification": {
+          "$ref": "#/$defs/outputFact"
         }
       }
     },

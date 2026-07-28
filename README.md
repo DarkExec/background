@@ -26,6 +26,10 @@ secrets, model selection, or automatic task resumption.
 read-only consumer such as DarkExec Watch may receive. The schema excludes raw prompts, transcripts,
 tool arguments, credentials, target payloads, and arbitrary command output.
 
+The projection includes bounded product, harness, and notification summaries with explicit field
+provenance. It may identify native tasks, project roots, and private receipt references, but it does
+not copy the private receipt or raw agent trace into Watch.
+
 The two sanitized examples deliberately exercise different shapes:
 
 - `examples/projections/gos-watchdog.json`: an incident-triggered agent completed while domain

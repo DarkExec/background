@@ -50,6 +50,7 @@ def main() -> None:
         walk(fixture)
         assert fixture["schema"] == "darkexec.background.projection/v1"
         assert len(fixture["timeline"]) <= 32
+        assert set(fixture["outputs"]) == {"product", "harness", "notification"}
         statuses.add(fixture["execution"]["status"])
         if jsonschema is not None:
             jsonschema.Draft202012Validator(schema).validate(fixture)

@@ -30,6 +30,11 @@ projection is a bounded operational envelope, not a transcript or a replacement 
 receipt. It keeps admission, execution, verification, notification, and attention as independent
 facts so a consumer cannot turn “the agent finished” into “the real job succeeded.”
 
+Product, harness, and notification outputs remain separate bounded facts. Each output names its
+owner, source field, observation time, and composition inputs. This lets an operator compare later
+evidence with an earlier payload and see which component selected the notification fields without
+asking Watch to diagnose the target system.
+
 The initial contract is `schemas/darkexec-background-projection.v1.schema.json`. It is deliberately
 transport-neutral: a local fixture, file exporter, or future asynchronous HTTPS publisher can emit
 the same document. Background execution never waits for a projection consumer.
