@@ -49,29 +49,32 @@ def ensure_state_root() -> None:
     os.chmod(STATE_ROOT, 0o700)
 
 
-def load_job(path: Path) -> dict:
+def load_job(path: Path, prompt: str | None = None) -> dict:
     try:
         job = json.loads(path.read_text())
     except (OSError, json.JSONDecodeError) as exc:
         raise ValueError(f"cannot read job definition {path}: {exc}") from exc
-    allowed = {
+    allowed_v1 = {
         "schemaVersion", "id", "target", "promptFile", "cadenceSeconds",
         "readOnlyHarness", "timeoutSeconds",
     }
+    allowed_v2 = {
+        "schemaVersion", "id", "target", "promptMode", "cadenceSeconds",
+        "readOnlyHarness", "timeoutSeconds",
+    }
+    schema_version = job.get("schemaVersion")
+    allowed = allowed_v1 if schema_version == 1 else allowed_v2
     unknown = sorted(set(job) - allowed)
     if unknown:
         raise ValueError(f"unknown job fields: {', '.join(unknown)}")
-    if job.get("schemaVersion") != 1:
-        raise ValueError("schemaVersion must be 1")
+    if schema_version not in {1, 2}:
+        raise ValueError("schemaVersion must be 1 or 2")
     job_id = job.get("id")
     if not isinstance(job_id, str) or not ID_PATTERN.fullmatch(job_id):
         raise ValueError("id must contain 1-64 letters, numbers, dots, underscores, or hyphens")
     target = Path(str(job.get("target", "")))
-    prompt_file = Path(str(job.get("promptFile", "")))
     if not target.is_absolute() or not target.is_dir():
         raise ValueError("target must be an existing absolute directory")
-    if not prompt_file.is_absolute() or not prompt_file.is_file():
-        raise ValueError("promptFile must be an existing absolute file")
     cadence = job.get("cadenceSeconds")
     if not isinstance(cadence, int) or not 60 <= cadence <= 31_536_000:
         raise ValueError("cadenceSeconds must be an integer from 60 to 31536000")
@@ -80,17 +83,32 @@ def load_job(path: Path) -> dict:
         raise ValueError("timeoutSeconds must be an integer from 1 to 86400")
     if not isinstance(job.get("readOnlyHarness", False), bool):
         raise ValueError("readOnlyHarness must be boolean")
-    prompt = prompt_file.read_text()
-    if not prompt.strip():
-        raise ValueError("promptFile must not be empty")
-    return {
+    definition_sha = hashlib.sha256(
+        json.dumps(job, sort_keys=True, separators=(",", ":")).encode()
+    ).hexdigest()
+    loaded = {
         **job,
         "target": str(target.resolve()),
-        "promptFile": str(prompt_file.resolve()),
-        "prompt": prompt,
+        "definitionSha256": definition_sha,
         "timeoutSeconds": timeout,
         "readOnlyHarness": job.get("readOnlyHarness", False),
     }
+    if schema_version == 1:
+        prompt_file = Path(str(job.get("promptFile", "")))
+        if not prompt_file.is_absolute() or not prompt_file.is_file():
+            raise ValueError("promptFile must be an existing absolute file")
+        file_prompt = prompt_file.read_text()
+        if not file_prompt.strip():
+            raise ValueError("promptFile must not be empty")
+        loaded.update({"promptFile": str(prompt_file.resolve()), "prompt": file_prompt})
+    else:
+        if job.get("promptMode") != "stdin":
+            raise ValueError("schemaVersion 2 requires promptMode=stdin")
+        if prompt is not None:
+            if not prompt.strip():
+                raise ValueError("stdin prompt must not be empty")
+            loaded["prompt"] = prompt
+    return loaded
 
 
 def event_id(job: dict, supplied: str | None) -> str:
@@ -160,7 +178,16 @@ def parse_darkexec(stdout: str) -> dict:
 
 
 def run_job(args) -> int:
-    job = load_job(Path(args.job).resolve())
+    definition_path = Path(args.job).resolve()
+    definition = load_job(definition_path)
+    if definition["schemaVersion"] == 2:
+        if not args.prompt_stdin:
+            raise ValueError("schemaVersion 2 run requires --prompt-stdin")
+        job = load_job(definition_path, sys.stdin.read())
+    else:
+        if args.prompt_stdin:
+            raise ValueError("--prompt-stdin is only valid for schemaVersion 2")
+        job = definition
     event = event_id(job, args.event_id)
     fingerprint, darkexec_job = identity(job, event)
     ensure_state_root()
@@ -186,6 +213,8 @@ def run_job(args) -> int:
         "jobId": job["id"],
         "eventId": event,
         "requestFingerprint": fingerprint,
+        "definitionSha256": job["definitionSha256"],
+        "runtimeVersion": "2",
         "promptSha256": hashlib.sha256(job["prompt"].encode()).hexdigest(),
         "targetPath": job["target"],
         "darkexecJobId": darkexec_job,
@@ -285,6 +314,7 @@ def main() -> int:
     run = sub.add_parser("run")
     run.add_argument("--job", required=True)
     run.add_argument("--event-id")
+    run.add_argument("--prompt-stdin", action="store_true")
     run.add_argument("--json", action="store_true")
     inspect = sub.add_parser("status")
     inspect.add_argument("--job", required=True)
@@ -303,7 +333,12 @@ def main() -> int:
             "status": "valid",
             "id": job["id"],
             "target": job["target"],
-            "promptSha256": hashlib.sha256(job["prompt"].encode()).hexdigest(),
+            "definitionSha256": job["definitionSha256"],
+            "promptMode": "file" if job["schemaVersion"] == 1 else job["promptMode"],
+            "promptSha256": (
+                hashlib.sha256(job["prompt"].encode()).hexdigest()
+                if job["schemaVersion"] == 1 else None
+            ),
         }, sort_keys=True))
         return 0
     except ValueError as exc:

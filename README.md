@@ -56,6 +56,32 @@ These examples are compatibility fixtures, not production records.
 Prompts are read from files and sent to DarkExec over stdin; they do not appear in process
 arguments. Receipts store only the prompt digest.
 
+Event-driven owners use the additive v2 definition and supply each natural prompt on stdin:
+
+```json
+{
+  "schemaVersion": 2,
+  "id": "gos-watchdog",
+  "target": "/srv/voice",
+  "promptMode": "stdin",
+  "cadenceSeconds": 1800,
+  "readOnlyHarness": false,
+  "timeoutSeconds": 3600
+}
+```
+
+```bash
+printf '%s' "$incident_prompt" |
+  darkexec-background run \
+    --job /etc/darkexec-background/gos-watchdog.json \
+    --event-id gos-watchdog-<uuid> \
+    --prompt-stdin \
+    --json
+```
+
+V1 file-backed definitions remain unchanged. V2 is deliberately small: the target still owns event
+detection, admission, prompt construction, verification, and notification.
+
 ## Use
 
 ```bash

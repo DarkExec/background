@@ -2,7 +2,7 @@
 
 ```text
 systemd timer or external trigger
-  -> one job definition + cadence/event identity
+  -> one versioned job definition + cadence/event identity
   -> per-job nonblocking lock
   -> one idempotent darkexec dispatch
   -> App-visible executive and target tasks
@@ -19,6 +19,11 @@ State defaults to `/var/lib/darkexec-background` with directories mode `0700` an
 `0600`.
 One lock per job prevents overlapping events for that job. The same event fails closed if its target,
 prompt digest, or harness mode changes.
+
+Schema v1 definitions retain file-backed prompts. Schema v2 adds `promptMode: stdin` for
+target-owned live events such as watchdog incidents and Discord messages. The prompt is hashed for
+idempotency and passed directly to DarkExec; it is never written into the compact Background
+receipt. Existing v1 definitions and invocations remain valid.
 
 Schedulers own when to invoke Background. Targets own their code, tools, tests, proof, and operational
 memory. Notification systems own external delivery.
