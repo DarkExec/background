@@ -1,0 +1,105 @@
+{
+  "schema": "darkexec.background.projection/v1",
+  "installation": {
+    "id": "install_agentfsd_fixture",
+    "label": "AgentFSD fixture"
+  },
+  "agent": {
+    "id": "gos-watchdog",
+    "label": "GOS watchdog",
+    "definitionRevision": "definition_fixture_gos_v1",
+    "runtimeVersion": "background_fixture_v1",
+    "targetLabel": "Voice production operations",
+    "trigger": {
+      "kind": "event",
+      "summary": "A deterministic watchdog admits a production incident"
+    }
+  },
+  "run": {
+    "id": "run_gos_fixture_20260726",
+    "eventId": "incident_voice_models_fixture_20260726",
+    "observedAt": "2026-07-26T06:49:29Z"
+  },
+  "admission": {
+    "status": "admitted",
+    "reasonCode": "watchdog_incident",
+    "summary": "The deterministic watchdog admitted one bounded incident."
+  },
+  "execution": {
+    "status": "completed",
+    "startedAt": "2026-07-26T06:49:43Z",
+    "completedAt": "2026-07-26T06:59:28Z",
+    "darkexecJobId": "gos-watchdog-fixture-run",
+    "executiveTaskRef": "task_fixture_executive",
+    "targetTaskRef": "task_fixture_target",
+    "harnessStatus": "completed"
+  },
+  "verification": {
+    "status": "partial",
+    "summary": "Repair verification passed; incident reconciliation remained open."
+  },
+  "notification": {
+    "status": "delivered",
+    "summary": "The target-owned founder notification was delivered."
+  },
+  "attention": {
+    "status": "open",
+    "reasonCode": "verification_partial",
+    "summary": "Reconciliation still needs operator attention."
+  },
+  "usage": {
+    "modelCalls": 42,
+    "toolOperations": 38,
+    "tokens": 3796935
+  },
+  "timeline": [
+    {
+      "kind": "triggered",
+      "occurredAt": "2026-07-26T06:49:29Z",
+      "status": "observed",
+      "summary": "Watchdog incident observed."
+    },
+    {
+      "kind": "admission_completed",
+      "occurredAt": "2026-07-26T06:49:40Z",
+      "status": "admitted",
+      "summary": "Deterministic incident admission passed."
+    },
+    {
+      "kind": "dispatched",
+      "occurredAt": "2026-07-26T06:49:43Z",
+      "status": "created",
+      "summary": "DarkExec dispatch created."
+    },
+    {
+      "kind": "execution_completed",
+      "occurredAt": "2026-07-26T06:59:20Z",
+      "status": "completed",
+      "summary": "The target task completed."
+    },
+    {
+      "kind": "harness_completed",
+      "occurredAt": "2026-07-26T06:59:28Z",
+      "status": "completed",
+      "summary": "Same-task closeout completed."
+    },
+    {
+      "kind": "verification_completed",
+      "occurredAt": "2026-07-26T06:59:28Z",
+      "status": "partial",
+      "summary": "Repair passed verification while reconciliation remained open."
+    },
+    {
+      "kind": "notification_completed",
+      "occurredAt": "2026-07-26T06:59:28Z",
+      "status": "delivered",
+      "summary": "Founder notification delivered."
+    },
+    {
+      "kind": "attention_changed",
+      "occurredAt": "2026-07-26T06:59:28Z",
+      "status": "open",
+      "summary": "Partial verification keeps attention open."
+    }
+  ]
+}

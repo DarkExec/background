@@ -1,0 +1,331 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://darkexec.com/schemas/darkexec-background-projection.v1.schema.json",
+  "title": "DarkExec Background sanitized projection v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "installation",
+    "agent",
+    "run",
+    "admission",
+    "execution",
+    "verification",
+    "notification",
+    "attention",
+    "usage",
+    "timeline"
+  ],
+  "properties": {
+    "schema": {
+      "const": "darkexec.background.projection/v1"
+    },
+    "installation": {
+      "$ref": "#/$defs/installation"
+    },
+    "agent": {
+      "$ref": "#/$defs/agent"
+    },
+    "run": {
+      "$ref": "#/$defs/run"
+    },
+    "admission": {
+      "$ref": "#/$defs/admission"
+    },
+    "execution": {
+      "$ref": "#/$defs/execution"
+    },
+    "verification": {
+      "$ref": "#/$defs/fact"
+    },
+    "notification": {
+      "$ref": "#/$defs/notification"
+    },
+    "attention": {
+      "$ref": "#/$defs/attention"
+    },
+    "usage": {
+      "$ref": "#/$defs/usage"
+    },
+    "timeline": {
+      "type": "array",
+      "maxItems": 32,
+      "items": {
+        "$ref": "#/$defs/timelineEvent"
+      }
+    }
+  },
+  "$defs": {
+    "opaqueId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9._:-]+$"
+    },
+    "shortText": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160
+    },
+    "summary": {
+      "type": ["string", "null"],
+      "maxLength": 500
+    },
+    "timestamp": {
+      "type": ["string", "null"],
+      "format": "date-time"
+    },
+    "installation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "label"],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/opaqueId"
+        },
+        "label": {
+          "$ref": "#/$defs/shortText"
+        }
+      }
+    },
+    "agent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "label",
+        "definitionRevision",
+        "runtimeVersion",
+        "targetLabel",
+        "trigger"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/opaqueId"
+        },
+        "label": {
+          "$ref": "#/$defs/shortText"
+        },
+        "definitionRevision": {
+          "$ref": "#/$defs/opaqueId"
+        },
+        "runtimeVersion": {
+          "$ref": "#/$defs/opaqueId"
+        },
+        "targetLabel": {
+          "$ref": "#/$defs/shortText"
+        },
+        "trigger": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "summary"],
+          "properties": {
+            "kind": {
+              "enum": ["schedule", "event", "manual"]
+            },
+            "summary": {
+              "$ref": "#/$defs/shortText"
+            }
+          }
+        }
+      }
+    },
+    "run": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "eventId", "observedAt"],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/opaqueId"
+        },
+        "eventId": {
+          "$ref": "#/$defs/opaqueId"
+        },
+        "observedAt": {
+          "$ref": "#/$defs/timestamp"
+        }
+      }
+    },
+    "admission": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "reasonCode", "summary"],
+      "properties": {
+        "status": {
+          "enum": ["unknown", "admitted", "suppressed"]
+        },
+        "reasonCode": {
+          "type": ["string", "null"],
+          "maxLength": 80,
+          "pattern": "^[a-z0-9._-]+$"
+        },
+        "summary": {
+          "$ref": "#/$defs/summary"
+        }
+      }
+    },
+    "execution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "startedAt",
+        "completedAt",
+        "darkexecJobId",
+        "executiveTaskRef",
+        "targetTaskRef",
+        "harnessStatus"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "not_dispatched",
+            "queued",
+            "running",
+            "completed",
+            "failed",
+            "timed_out",
+            "interrupted"
+          ]
+        },
+        "startedAt": {
+          "$ref": "#/$defs/timestamp"
+        },
+        "completedAt": {
+          "$ref": "#/$defs/timestamp"
+        },
+        "darkexecJobId": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/opaqueId"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "executiveTaskRef": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/opaqueId"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "targetTaskRef": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/opaqueId"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "harnessStatus": {
+          "enum": ["unknown", "not_started", "running", "completed", "failed", "not_applicable"]
+        }
+      }
+    },
+    "fact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "summary"],
+      "properties": {
+        "status": {
+          "enum": ["unknown", "pending", "passed", "partial", "failed", "not_applicable"]
+        },
+        "summary": {
+          "$ref": "#/$defs/summary"
+        }
+      }
+    },
+    "notification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "summary"],
+      "properties": {
+        "status": {
+          "enum": ["unknown", "not_required", "pending", "delivered", "failed"]
+        },
+        "summary": {
+          "$ref": "#/$defs/summary"
+        }
+      }
+    },
+    "attention": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "reasonCode", "summary"],
+      "properties": {
+        "status": {
+          "enum": ["none", "open", "acknowledged", "resolved"]
+        },
+        "reasonCode": {
+          "type": ["string", "null"],
+          "maxLength": 80,
+          "pattern": "^[a-z0-9._-]+$"
+        },
+        "summary": {
+          "$ref": "#/$defs/summary"
+        }
+      }
+    },
+    "usage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["modelCalls", "toolOperations", "tokens"],
+      "properties": {
+        "modelCalls": {
+          "type": ["integer", "null"],
+          "minimum": 0
+        },
+        "toolOperations": {
+          "type": ["integer", "null"],
+          "minimum": 0
+        },
+        "tokens": {
+          "type": ["integer", "null"],
+          "minimum": 0
+        }
+      }
+    },
+    "timelineEvent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "occurredAt", "status", "summary"],
+      "properties": {
+        "kind": {
+          "enum": [
+            "triggered",
+            "admission_completed",
+            "dispatched",
+            "executive_started",
+            "target_started",
+            "execution_completed",
+            "harness_completed",
+            "verification_completed",
+            "notification_completed",
+            "attention_changed"
+          ]
+        },
+        "occurredAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "status": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 40,
+          "pattern": "^[a-z0-9._-]+$"
+        },
+        "summary": {
+          "$ref": "#/$defs/summary"
+        }
+      }
+    }
+  }
+}
