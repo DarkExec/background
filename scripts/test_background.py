@@ -22,6 +22,8 @@ count.write_text(str(int(count.read_text() or "0") + 1))
 prompt = sys.stdin.read()
 if prompt == "SLOW":
     time.sleep(30)
+if prompt == "DELAYED":
+    time.sleep(0.2)
 print(json.dumps({
     "status": "completed",
     "executive": {"threadId": "executive-visible"},
@@ -192,6 +194,14 @@ def main() -> None:
             "--event-id", "incident-1", "--prompt-stdin", "--json",
         ], env, "CHANGED INCIDENT")
         assert dynamic_conflict.returncode != 0
+        dynamic_job["timeoutSeconds"] = 0
+        dynamic_definition.write_text(json.dumps(dynamic_job))
+        unbounded = invoke([
+            str(BACKGROUND), "run", "--job", str(dynamic_definition),
+            "--event-id", "incident-unbounded", "--prompt-stdin", "--json",
+        ], env, "DELAYED")
+        assert unbounded.returncode == 0, unbounded.stderr
+        assert json.loads(unbounded.stdout)["status"] == "completed"
         missing_stdin = invoke([
             str(BACKGROUND), "run", "--job", str(dynamic_definition),
             "--event-id", "incident-2", "--json",
@@ -203,6 +213,7 @@ def main() -> None:
         "private-receipt", "status-readback", "timeout-terminalized",
         "concurrency-excluded", "signal-terminalized", "dynamic-stdin",
         "definition-digest", "v2-idempotency", "v2-conflict-closed",
+        "unbounded-execution",
     ]}))
 
 

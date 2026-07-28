@@ -78,9 +78,9 @@ def load_job(path: Path, prompt: str | None = None) -> dict:
     cadence = job.get("cadenceSeconds")
     if not isinstance(cadence, int) or not 60 <= cadence <= 31_536_000:
         raise ValueError("cadenceSeconds must be an integer from 60 to 31536000")
-    timeout = job.get("timeoutSeconds", 900)
-    if not isinstance(timeout, int) or not 1 <= timeout <= 86_400:
-        raise ValueError("timeoutSeconds must be an integer from 1 to 86400")
+    timeout = job.get("timeoutSeconds", 0)
+    if not isinstance(timeout, int) or not 0 <= timeout <= 86_400:
+        raise ValueError("timeoutSeconds must be an integer from 0 to 86400")
     if not isinstance(job.get("readOnlyHarness", False), bool):
         raise ValueError("readOnlyHarness must be boolean")
     definition_sha = hashlib.sha256(
@@ -249,7 +249,8 @@ def run_job(args) -> int:
         previous_handlers[signum] = signal.signal(signum, handle_signal)
     try:
         try:
-            stdout, stderr = process.communicate(job["prompt"], timeout=job["timeoutSeconds"])
+            timeout = job["timeoutSeconds"] or None
+            stdout, stderr = process.communicate(job["prompt"], timeout=timeout)
         except subprocess.TimeoutExpired:
             terminate_group(process)
             try:

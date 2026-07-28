@@ -66,7 +66,7 @@ Event-driven owners use the additive v2 definition and supply each natural promp
   "promptMode": "stdin",
   "cadenceSeconds": 1800,
   "readOnlyHarness": false,
-  "timeoutSeconds": 3600
+  "timeoutSeconds": 0
 }
 ```
 
@@ -81,6 +81,9 @@ printf '%s' "$incident_prompt" |
 
 V1 file-backed definitions remain unchanged. V2 is deliberately small: the target still owns event
 detection, admission, prompt construction, verification, and notification.
+
+`timeoutSeconds: 0` is the default and leaves useful agent execution unbounded. Positive values
+remain available for explicitly bounded jobs.
 
 ## Use
 
