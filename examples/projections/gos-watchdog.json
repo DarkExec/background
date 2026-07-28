@@ -16,9 +16,9 @@
     }
   },
   "run": {
-    "id": "run_gos_fixture_20260726",
-    "eventId": "incident_voice_models_fixture_20260726",
-    "observedAt": "2026-07-26T06:49:29Z"
+    "id": "gos-watchdog-3a0d20c9-4053-40ac-99b9-8f18a8e2e7d1",
+    "eventId": "incident_easyaivoice_transport_fixture_20260727",
+    "observedAt": "2026-07-27T20:19:59Z"
   },
   "admission": {
     "status": "admitted",
@@ -27,79 +27,111 @@
   },
   "execution": {
     "status": "completed",
-    "startedAt": "2026-07-26T06:49:43Z",
-    "completedAt": "2026-07-26T06:59:28Z",
-    "darkexecJobId": "gos-watchdog-fixture-run",
-    "executiveTaskRef": "task_fixture_executive",
-    "targetTaskRef": "task_fixture_target",
-    "harnessStatus": "completed"
+    "startedAt": "2026-07-27T20:20:10Z",
+    "completedAt": "2026-07-27T20:29:23Z",
+    "darkexecJobId": "gos-watchdog-3a0d20c9-4053-40ac-99b9-8f18a8e2e7d1",
+    "executiveTaskRef": "019fa53c-253c-7ee0-96d5-d2217f7fdf90",
+    "targetTaskRef": "019fa53c-370f-7373-ad59-d048ddf7ec99",
+    "harnessStatus": "completed",
+    "executiveProjectRoot": "/srv/darkexec",
+    "targetProjectRoot": "/srv/voice",
+    "backgroundReceiptRef": "background:fixture:gos-watchdog-3a0d20c9",
+    "darkexecReceiptRef": "darkexec:gos-watchdog-3a0d20c9-4053-40ac-99b9-8f18a8e2e7d1"
   },
   "verification": {
     "status": "partial",
-    "summary": "Repair verification passed; incident reconciliation remained open."
+    "summary": "The later harness observed positive recovery after the product result remained open."
   },
   "notification": {
     "status": "delivered",
-    "summary": "The target-owned founder notification was delivered."
+    "summary": "The terminal notification was delivered after harness completion."
   },
   "attention": {
     "status": "open",
-    "reasonCode": "verification_partial",
-    "summary": "Reconciliation still needs operator attention."
+    "reasonCode": "output_provenance_review",
+    "summary": "The notification payload can be inspected against the later harness evidence."
   },
   "usage": {
-    "modelCalls": 42,
-    "toolOperations": 38,
-    "tokens": 3796935
+    "modelCalls": 50,
+    "toolOperations": 46,
+    "tokens": 4520832
+  },
+  "outputs": {
+    "product": {
+      "status": "incident_open_unresolved",
+      "summary": "The product result reported the incident open and unresolved.",
+      "owner": "darkexec",
+      "sourceField": "target.resultText",
+      "observedAt": "2026-07-27T20:29:00Z",
+      "composedFrom": []
+    },
+    "harness": {
+      "status": "positive_recovery_observed",
+      "summary": "The later harness result reported positive recovery evidence.",
+      "owner": "darkexec",
+      "sourceField": "target.harness.resultText",
+      "observedAt": "2026-07-27T20:29:23Z",
+      "composedFrom": []
+    },
+    "notification": {
+      "status": "delivered",
+      "summary": "The terminal notification contained the earlier open and unresolved product result.",
+      "owner": "gos-watchdog",
+      "sourceField": "terminalNotification.text",
+      "observedAt": "2026-07-27T20:29:23Z",
+      "composedFrom": [
+        "target.resultText"
+      ]
+    }
   },
   "timeline": [
     {
       "kind": "triggered",
-      "occurredAt": "2026-07-26T06:49:29Z",
+      "occurredAt": "2026-07-27T20:19:59Z",
       "status": "observed",
       "summary": "Watchdog incident observed."
     },
     {
       "kind": "admission_completed",
-      "occurredAt": "2026-07-26T06:49:40Z",
+      "occurredAt": "2026-07-27T20:20:09Z",
       "status": "admitted",
       "summary": "Deterministic incident admission passed."
     },
     {
       "kind": "dispatched",
-      "occurredAt": "2026-07-26T06:49:43Z",
+      "occurredAt": "2026-07-27T20:20:10Z",
       "status": "created",
       "summary": "DarkExec dispatch created."
     },
     {
       "kind": "execution_completed",
-      "occurredAt": "2026-07-26T06:59:20Z",
+      "occurredAt": "2026-07-27T20:29:00Z",
       "status": "completed",
       "summary": "The target task completed."
     },
     {
       "kind": "harness_completed",
-      "occurredAt": "2026-07-26T06:59:28Z",
+      "occurredAt": "2026-07-27T20:29:23Z",
       "status": "completed",
       "summary": "Same-task closeout completed."
     },
     {
       "kind": "verification_completed",
-      "occurredAt": "2026-07-26T06:59:28Z",
+      "occurredAt": "2026-07-27T20:29:23Z",
       "status": "partial",
-      "summary": "Repair passed verification while reconciliation remained open."
+      "summary": "Later harness evidence reported positive recovery."
     },
     {
       "kind": "notification_completed",
-      "occurredAt": "2026-07-26T06:59:28Z",
+      "occurredAt": "2026-07-27T20:29:23Z",
       "status": "delivered",
-      "summary": "Founder notification delivered."
+      "summary": "GOS composed the terminal notification from target.resultText."
     },
     {
       "kind": "attention_changed",
-      "occurredAt": "2026-07-26T06:59:28Z",
+      "occurredAt": "2026-07-27T20:29:23Z",
       "status": "open",
-      "summary": "Partial verification keeps attention open."
+      "summary": "Output provenance remains inspectable."
     }
   ]
 }

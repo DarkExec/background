@@ -32,7 +32,11 @@
     "darkexecJobId": null,
     "executiveTaskRef": null,
     "targetTaskRef": null,
-    "harnessStatus": "not_applicable"
+    "harnessStatus": "not_applicable",
+    "executiveProjectRoot": null,
+    "targetProjectRoot": "/root/.openclaw/workspace/voiceze",
+    "backgroundReceiptRef": "background:fixture:voiceze-discord-message",
+    "darkexecReceiptRef": null
   },
   "verification": {
     "status": "not_applicable",
@@ -51,6 +55,32 @@
     "modelCalls": 0,
     "toolOperations": 0,
     "tokens": 0
+  },
+  "outputs": {
+    "product": {
+      "status": "no_action_required",
+      "summary": "The deterministic gate suppressed the message event.",
+      "owner": "voiceze",
+      "sourceField": "admission.status",
+      "observedAt": "2026-07-27T14:00:01Z",
+      "composedFrom": []
+    },
+    "harness": {
+      "status": "not_applicable",
+      "summary": null,
+      "owner": "background",
+      "sourceField": "execution.harnessStatus",
+      "observedAt": null,
+      "composedFrom": []
+    },
+    "notification": {
+      "status": "not_required",
+      "summary": null,
+      "owner": "voiceze",
+      "sourceField": "notification.status",
+      "observedAt": null,
+      "composedFrom": []
+    }
   },
   "timeline": [
     {
