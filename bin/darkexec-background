@@ -150,8 +150,10 @@ def emit(payload: dict, as_json: bool) -> None:
 
 
 def terminalize(path: Path, receipt: dict, status: str, error: str | None = None) -> None:
+    terminal_at = now()
     receipt["status"] = status
-    receipt["updatedAt"] = now()
+    receipt["updatedAt"] = terminal_at
+    receipt["terminalAt"] = terminal_at
     receipt["terminal"] = True
     if error:
         receipt["error"] = error[:2000]
@@ -214,7 +216,7 @@ def run_job(args) -> int:
         "eventId": event,
         "requestFingerprint": fingerprint,
         "definitionSha256": job["definitionSha256"],
-        "runtimeVersion": "2",
+        "runtimeVersion": "3",
         "promptSha256": hashlib.sha256(job["prompt"].encode()).hexdigest(),
         "targetPath": job["target"],
         "darkexecJobId": darkexec_job,

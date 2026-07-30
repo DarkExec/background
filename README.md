@@ -6,6 +6,9 @@ DarkExec Background is a durable background-agent runner for
 It converts a scheduled or externally identified event into at most one DarkExec dispatch, then
 stores a compact terminal receipt containing the visible native task identities.
 
+Terminal receipts include `terminalAt`, so a scheduler or notification owner can react to the exact
+completion fact without treating receipt modification time as lifecycle truth.
+
 ## Ownership
 
 Background owns:

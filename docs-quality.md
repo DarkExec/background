@@ -9,6 +9,7 @@ A qualified Background event has:
 - unbounded execution by default, with terminal signal, transport failure, DarkExec failure, or
   completion and an explicit positive timeout only when a job opts into one;
 - executive and target task identities on successful completion;
+- an explicit `terminalAt` on completed, failed, timed-out, and interrupted receipts;
 - atomic private receipt and deterministic status readback; and
 - no detector, business policy, notification, target secret, or automatic resume behavior.
 
