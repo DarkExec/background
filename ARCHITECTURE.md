@@ -15,6 +15,11 @@ directly. DarkExec owns task creation, exact App-list visibility, target closeou
 receipt. Background stores only the identities and terminal fields needed to audit the background
 trigger.
 
+Every terminal receipt records an immutable `terminalAt` alongside `updatedAt`. Downstream owners
+may use that fact to schedule their own verification or notification settlement without inferring
+completion from receipt file metadata. Background still does not choose a settlement window or
+deliver a notification.
+
 State defaults to `/var/lib/darkexec-background` with directories mode `0700` and receipt mode
 `0600`.
 One lock per job prevents overlapping events for that job. The same event fails closed if its target,

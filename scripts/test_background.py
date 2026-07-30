@@ -85,6 +85,7 @@ def main() -> None:
         completed = json.loads(first.stdout)
         assert completed["status"] == "completed", completed
         assert completed["terminal"] is True
+        assert completed["terminalAt"] == completed["updatedAt"]
         assert completed["executiveThreadId"] == "executive-visible"
         assert completed["targetThreadId"] == "target-visible"
         assert completed["harnessStatus"] == "completed"
@@ -125,6 +126,7 @@ def main() -> None:
         assert timed.returncode == 1, timed
         timed_receipt = json.loads(timed.stdout)
         assert timed_receipt["status"] == "failed" and timed_receipt["terminal"] is True
+        assert timed_receipt["terminalAt"] == timed_receipt["updatedAt"]
         assert timed_receipt["timedOut"] is True
 
         job["timeoutSeconds"] = 10
@@ -156,6 +158,7 @@ def main() -> None:
         assert running.returncode == 128 + signal.SIGTERM, (running.returncode, stdout, stderr)
         interrupted = json.loads(stdout)
         assert interrupted["status"] == "interrupted" and interrupted["terminal"] is True
+        assert interrupted["terminalAt"] == interrupted["updatedAt"]
         assert count.read_text() == "3", count.read_text()
 
         dynamic_definition = root / "dynamic-job.json"
@@ -181,7 +184,7 @@ def main() -> None:
         assert dynamic_first.returncode == 0, dynamic_first.stderr
         dynamic_receipt = json.loads(dynamic_first.stdout)
         assert dynamic_receipt["definitionSha256"]
-        assert dynamic_receipt["runtimeVersion"] == "2"
+        assert dynamic_receipt["runtimeVersion"] == "3"
         assert "DYNAMIC INCIDENT" not in receipt_path(state, "dynamic-job", "incident-1").read_text()
         dynamic_repeat = invoke([
             str(BACKGROUND), "run", "--job", str(dynamic_definition),
@@ -213,7 +216,7 @@ def main() -> None:
         "private-receipt", "status-readback", "timeout-terminalized",
         "concurrency-excluded", "signal-terminalized", "dynamic-stdin",
         "definition-digest", "v2-idempotency", "v2-conflict-closed",
-        "unbounded-execution",
+        "unbounded-execution", "explicit-terminal-timestamp",
     ]}))
 
 
