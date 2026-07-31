@@ -32,6 +32,8 @@ receipt. Existing v1 definitions and invocations remain valid.
 
 Background does not impose an execution deadline by default. A job may opt into a positive
 `timeoutSeconds`; zero keeps the DarkExec dispatch alive until completion or an explicit signal.
+The installed systemd template also uses `TimeoutStartSec=infinity`, so service supervision cannot
+silently replace an unbounded job definition with a host-level deadline.
 
 Schedulers own when to invoke Background. Targets own their code, tools, tests, proof, and operational
 memory. Notification systems own external delivery.
