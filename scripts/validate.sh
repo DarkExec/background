@@ -14,6 +14,8 @@ for path in AGENTS.md ARCHITECTURE.md CONTRIBUTING.md LICENSE README.md SECURITY
   }
 done
 
+grep -Fqx 'TimeoutStartSec=infinity' "$root/systemd/darkexec-background@.service"
+
 PYTHONDONTWRITEBYTECODE=1 python3 "$root/scripts/test_background.py"
 PYTHONDONTWRITEBYTECODE=1 python3 "$root/scripts/test_projection_contract.py"
 bash -n "$root/scripts/install.sh" "$root/scripts/validate.sh"
