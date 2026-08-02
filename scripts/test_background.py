@@ -101,6 +101,29 @@ def main() -> None:
         assert json.loads(repeat.stdout)["createdAt"] == completed["createdAt"]
         assert count.read_text() == "1", count.read_text()
 
+        missing_transport_env = {
+            **env,
+            "DARKEXEC_BACKGROUND_DARKEXEC_BIN": str(root / "missing-darkexec"),
+        }
+        transport_failure = invoke([
+            str(BACKGROUND), "run", "--job", str(definition),
+            "--event-id", "event-transport-failure", "--json",
+        ], missing_transport_env)
+        assert transport_failure.returncode == 1, transport_failure
+        failed_transport_receipt = json.loads(transport_failure.stdout)
+        assert failed_transport_receipt["status"] == "failed"
+        assert failed_transport_receipt["terminal"] is True
+        assert failed_transport_receipt["terminalAt"] == failed_transport_receipt["updatedAt"]
+        assert failed_transport_receipt["error"].startswith("cannot launch DarkExec:")
+        assert count.read_text() == "1", count.read_text()
+        transport_repeat = invoke([
+            str(BACKGROUND), "run", "--job", str(definition),
+            "--event-id", "event-transport-failure", "--json",
+        ], env)
+        assert transport_repeat.returncode == 1, transport_repeat
+        assert json.loads(transport_repeat.stdout) == failed_transport_receipt
+        assert count.read_text() == "1", count.read_text()
+
         status = invoke([
             str(BACKGROUND), "status", "--job", str(definition),
             "--event-id", "event-1", "--json",
@@ -214,6 +237,7 @@ def main() -> None:
     print(json.dumps({"status": "passed", "contracts": [
         "valid-job", "one-dispatch", "idempotent-event", "conflict-closed",
         "private-receipt", "status-readback", "timeout-terminalized",
+        "transport-failure-terminalized", "transport-failure-no-retry",
         "concurrency-excluded", "signal-terminalized", "dynamic-stdin",
         "definition-digest", "v2-idempotency", "v2-conflict-closed",
         "unbounded-execution", "explicit-terminal-timestamp",
