@@ -233,14 +233,19 @@ def run_job(args) -> int:
     ]
     if job["readOnlyHarness"]:
         command.insert(-1, "--read-only-harness")
-    process = subprocess.Popen(
-        command,
-        stdin=subprocess.PIPE,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True,
-        start_new_session=True,
-    )
+    try:
+        process = subprocess.Popen(
+            command,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            start_new_session=True,
+        )
+    except OSError as exc:
+        terminalize(path, receipt, "failed", f"cannot launch DarkExec: {exc}")
+        emit(receipt, args.json)
+        return 1
     previous_handlers = {}
 
     def handle_signal(signum, _frame):
