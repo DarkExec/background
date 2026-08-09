@@ -14,6 +14,23 @@ for path in AGENTS.md ARCHITECTURE.md CONTRIBUTING.md LICENSE README.md SECURITY
   }
 done
 
+python3 - "$root/AGENTS.md" <<'PY'
+from pathlib import Path
+import sys
+
+source = Path(sys.argv[1]).read_text()
+headings = ["## Request routing", "## Working loop", "## Context routing", "## Boundaries", "## Validation"]
+positions = [source.index(heading) for heading in headings]
+assert positions == sorted(positions)
+for route in ("bin/darkexec-background", "schemas/darkexec-background-projection.v1.schema.json", "systemd/"):
+    assert route in source
+for owner in ("[Architecture](ARCHITECTURE.md)", "[Security](SECURITY.md)", "[Quality](docs-quality.md)", "[README](README.md)"):
+    assert owner in source
+assert "Start with one route." in source
+assert "Do not preload all four documents." in source
+PY
+grep -Fq '`AGENTS.md` owns request-to-implementation and unresolved-decision routing' "$root/ARCHITECTURE.md"
+
 grep -Fqx 'TimeoutStartSec=infinity' "$root/systemd/darkexec-background@.service"
 
 PYTHONDONTWRITEBYTECODE=1 python3 "$root/scripts/test_background.py"

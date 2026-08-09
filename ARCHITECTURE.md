@@ -1,5 +1,7 @@
 # Architecture
 
+`AGENTS.md` owns request-to-implementation and unresolved-decision routing for Background development; deeper documents retain their existing semantic owners and do not enter the default working set.
+
 ```text
 systemd timer or external trigger
   -> one versioned job definition + cadence/event identity
