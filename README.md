@@ -117,3 +117,5 @@ operator decision.
 ## Licence
 
 Apache-2.0.
+
+Jobs may set `skipInitialHarness: true` to complete the incident task without automatic harness work. This forwards `--skip-initial-harness` to a compatible DarkExec runtime, records the terminal skipped harness status, and binds the policy to the event identity. It is mutually exclusive with `readOnlyHarness: true`; omission preserves existing behavior and event fingerprints. Install a runtime supporting this flag before enabling it in a job.

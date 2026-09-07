@@ -29,7 +29,7 @@ print(json.dumps({
     "executive": {"threadId": "executive-visible"},
     "target": {
         "threadId": "target-visible",
-        "harness": {"status": "completed"}
+        "harness": {"status": "skipped" if "--skip-initial-harness" in sys.argv else "completed"}
     }
 }))
 """
@@ -233,6 +233,31 @@ def main() -> None:
             "--event-id", "incident-2", "--json",
         ], env)
         assert missing_stdin.returncode != 0
+
+        dynamic_job["skipInitialHarness"] = True
+        dynamic_definition.write_text(json.dumps(dynamic_job))
+        before_count = int(count.read_text())
+        skip_command = [str(BACKGROUND), "run", "--job", str(dynamic_definition), "--event-id", "skip-incident", "--prompt-stdin", "--json"]
+        skipped = invoke(skip_command, env, "NO AUTOMATIC HARNESS")
+        assert skipped.returncode == 0, skipped.stderr
+        assert json.loads(skipped.stdout)["harnessStatus"] == "skipped", skipped.stdout
+        assert invoke(skip_command, env, "NO AUTOMATIC HARNESS").returncode == 0
+        assert int(count.read_text()) == before_count + 1
+        dynamic_job["skipInitialHarness"] = False
+        dynamic_definition.write_text(json.dumps(dynamic_job))
+        changed = invoke(skip_command, env, "NO AUTOMATIC HARNESS")
+        assert changed.returncode != 0 and "different target, prompt, or harness mode" in changed.stderr
+        assert int(count.read_text()) == before_count + 1
+        # Explicit false preserves pre-upgrade identities.
+        prior_event = [str(BACKGROUND), "run", "--job", str(dynamic_definition), "--event-id", "incident-1", "--prompt-stdin", "--json"]
+        assert invoke(prior_event, env, "DYNAMIC INCIDENT").returncode == 0
+        for value in ("true", 1):
+            dynamic_job["skipInitialHarness"] = value
+            dynamic_definition.write_text(json.dumps(dynamic_job))
+            assert invoke([str(BACKGROUND), "validate-job", "--job", str(dynamic_definition)], env).returncode != 0
+        dynamic_job.update(skipInitialHarness=True, readOnlyHarness=True)
+        dynamic_definition.write_text(json.dumps(dynamic_job))
+        assert invoke([str(BACKGROUND), "validate-job", "--job", str(dynamic_definition)], env).returncode != 0
 
     print(json.dumps({"status": "passed", "contracts": [
         "valid-job", "one-dispatch", "idempotent-event", "conflict-closed",
