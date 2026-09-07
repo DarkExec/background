@@ -56,11 +56,11 @@ def load_job(path: Path, prompt: str | None = None) -> dict:
         raise ValueError(f"cannot read job definition {path}: {exc}") from exc
     allowed_v1 = {
         "schemaVersion", "id", "target", "promptFile", "cadenceSeconds",
-        "readOnlyHarness", "timeoutSeconds",
+        "readOnlyHarness", "skipInitialHarness", "timeoutSeconds",
     }
     allowed_v2 = {
         "schemaVersion", "id", "target", "promptMode", "cadenceSeconds",
-        "readOnlyHarness", "timeoutSeconds",
+        "readOnlyHarness", "skipInitialHarness", "timeoutSeconds",
     }
     schema_version = job.get("schemaVersion")
     allowed = allowed_v1 if schema_version == 1 else allowed_v2
@@ -83,6 +83,10 @@ def load_job(path: Path, prompt: str | None = None) -> dict:
         raise ValueError("timeoutSeconds must be an integer from 0 to 86400")
     if not isinstance(job.get("readOnlyHarness", False), bool):
         raise ValueError("readOnlyHarness must be boolean")
+    if not isinstance(job.get("skipInitialHarness", False), bool):
+        raise ValueError("skipInitialHarness must be boolean")
+    if job.get("skipInitialHarness") and job.get("readOnlyHarness"):
+        raise ValueError("skipInitialHarness and readOnlyHarness are mutually exclusive")
     definition_sha = hashlib.sha256(
         json.dumps(job, sort_keys=True, separators=(",", ":")).encode()
     ).hexdigest()
@@ -92,6 +96,7 @@ def load_job(path: Path, prompt: str | None = None) -> dict:
         "definitionSha256": definition_sha,
         "timeoutSeconds": timeout,
         "readOnlyHarness": job.get("readOnlyHarness", False),
+        "skipInitialHarness": job.get("skipInitialHarness", False),
     }
     if schema_version == 1:
         prompt_file = Path(str(job.get("promptFile", "")))
@@ -125,6 +130,7 @@ def identity(job: dict, event: str) -> tuple[str, str]:
         "target": job["target"],
         "promptSha256": prompt_sha,
         "readOnlyHarness": job["readOnlyHarness"],
+        **({"skipInitialHarness": True} if job["skipInitialHarness"] else {}),
     }, sort_keys=True).encode()).hexdigest()
     darkexec_job = f"background-{job['id']}-{hashlib.sha256(event.encode()).hexdigest()[:16]}"
     return fingerprint, darkexec_job
@@ -231,7 +237,9 @@ def run_job(args) -> int:
         DARKEXEC_BIN, "dispatch", "--target", job["target"],
         "--job-id", darkexec_job, "--prompt-stdin", "--json",
     ]
-    if job["readOnlyHarness"]:
+    if job["skipInitialHarness"]:
+        command.insert(-1, "--skip-initial-harness")
+    elif job["readOnlyHarness"]:
         command.insert(-1, "--read-only-harness")
     try:
         process = subprocess.Popen(
